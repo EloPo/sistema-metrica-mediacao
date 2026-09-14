@@ -1,4 +1,4 @@
-const BASE = (import.meta.env.VITEAPI || "http://localhost:3333").replace(/\/$/, "");
+const BASE = (import.meta.env.VITE_API || "http://localhost:3333").replace(/\/$/, "");
 const CHAVE = "mediacao.sessao";
 
 export function lerSessao() {
