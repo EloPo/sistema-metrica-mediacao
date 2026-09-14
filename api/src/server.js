@@ -45,5 +45,5 @@ app.use((erro, _req, res, _next) => {
   res.status(500).json({ erro: "Erro interno. Veja o log do servidor." });
 });
 
-const porta = process.env.PORTA || 3333;
+const porta = process.env.PORT || process.env.PORTA || 3333;
 app.listen(porta, () => console.log(`API de mediação ouvindo em http://localhost:${porta}`));
