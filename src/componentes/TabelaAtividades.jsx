@@ -3,7 +3,7 @@ import { duracao, hora, tipoInfo } from "../formato.js";
 export function baixarCsv(atividades, nomeArquivo) {
   const linhas = [[
     "Data", "Mediador", "Tipo", "Identificação", "Início", "Fim",
-    "Pausa (min)", "Tempo líquido", "Horas", "Situação", "Observação",
+    "Pausa (min)", "Tempo na demanda", "Horas", "Situação", "Observação",
   ]];
   atividades.forEach((a) => {
     linhas.push([
@@ -16,7 +16,9 @@ export function baixarCsv(atividades, nomeArquivo) {
       Math.round(a.pausa_ms / 60000),
       duracao(a.liquido_ms),
       (a.liquido_ms / 3600000).toFixed(2).replace(".", ","),
-      a.estado === "concluida" ? "Concluída" : "Em aberto",
+      a.encerrado_por_nome
+        ? `Encerrada por ${a.encerrado_por_nome}`
+        : a.estado === "concluida" ? "Concluída" : "Em aberto",
       a.observacao || "",
     ]);
   });
@@ -44,7 +46,7 @@ export default function TabelaAtividades({ atividades }) {
             <th>Início</th>
             <th>Fim</th>
             <th className="num">Pausa</th>
-            <th className="num">Tempo líquido</th>
+            <th className="num">Tempo na demanda</th>
             <th>Observação</th>
           </tr>
         </thead>
@@ -63,7 +65,14 @@ export default function TabelaAtividades({ atividades }) {
                 <td>{a.titulo}</td>
                 <td>{new Date(a.inicio).toLocaleDateString("pt-BR")}</td>
                 <td>{hora(a.inicio)}</td>
-                <td className={a.fim ? "" : "online"}>{a.fim ? hora(a.fim) : "em aberto"}</td>
+                <td className={a.fim ? "" : "online"}>
+                  {a.fim ? hora(a.fim) : "em aberto"}
+                  {a.encerrado_por_nome && (
+                    <span className="selo-encerrado" title={`Encerrada por ${a.encerrado_por_nome}`}>
+                      pela coordenação
+                    </span>
+                  )}
+                </td>
                 <td className="num">{a.pausa_ms ? duracao(a.pausa_ms) : "—"}</td>
                 <td className="num">{duracao(a.liquido_ms)}</td>
                 <td>{a.observacao}</td>

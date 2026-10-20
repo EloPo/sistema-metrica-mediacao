@@ -3,40 +3,40 @@
     "nome": "Adriele da Silva",
     "usuario": "adriele.silva",
     "email": "adriele.silva@unicive.edu.br",
-    "senha": "mediacao2026",
     "papel": "mediador",
-    "carga_semanal": 40
+    "carga_semanal": 40,
+    "dias_semana": 5
   },
   {
     "nome": "Gabriel Santin",
     "usuario": "gabriel.santin",
     "email": "gabriel.santin@unicive.edu.br",
-    "senha": "mediacao2026",
     "papel": "mediador",
-    "carga_semanal": 20
+    "carga_semanal": 20,
+    "dias_semana": 5
   },
   {
     "nome": "Isadora Benner",
     "usuario": "isadora.benner",
     "email": "isadora.benner@unicive.edu.br",
-    "senha": "mediacao2026",
     "papel": "mediador",
-    "carga_semanal": 20
+    "carga_semanal": 20,
+    "dias_semana": 5
   },
   {
     "nome": "Maycon da Silva",
     "usuario": "maycon.silva",
     "email": "maycon.silva@unicive.edu.br",
-    "senha": "mediacao2026",
     "papel": "mediador",
-    "carga_semanal": 20
+    "carga_semanal": 20,
+    "dias_semana": 5
   },
   {
     "nome": "Eloisa Potrich",
     "usuario": "eloisa.potrich",
     "email": "eloisa.potrich@unicive.edu.br",
-    "senha": "painel2026",
     "papel": "gestor",
-    "carga_semanal": 44
+    "carga_semanal": 44,
+    "dias_semana": 5
   }
 ]

@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import { consulta } from "./db.js";
 import { exigirLogin } from "./auth.js";
 import { assinc } from "./assinc.js";
+import { dataLocal, hojeLocal, FUSO } from "./fuso.js";
 
 export const rotasRelatorio = Router();
 rotasRelatorio.use(exigirLogin);
@@ -37,18 +38,27 @@ function transporte() {
 
 // Fecha o dia: monta o relatório do mediador e manda para o e-mail dele.
 rotasRelatorio.post("/enviar", assinc(async (req, res) => {
-  const dia = req.body.dia || new Date().toLocaleDateString("en-CA");
+  const dia = req.body.dia || hojeLocal();
 
   const { rows: pessoa } = await consulta(
-    "select nome, email, carga_semanal from usuarios where id = $1",
+    "select nome, email, carga_semanal, dias_semana from usuarios where id = $1",
     [req.usuario.id],
   );
-  const { nome, email, carga_semanal } = pessoa[0] || {};
+  const { nome, email, carga_semanal, dias_semana } = pessoa[0] || {};
+
+  // Jornada real do dia: períodos unidos, sem contar atendimento simultâneo
+  // duas vezes, e já sem as pausas.
+  const { rows: jornadaDoDia } = await consulta(
+    `select jornada_ms, esforco_ms, pausa_ms, tarefas
+       from v_jornada where usuario_id = $1 and dia = $2::date`,
+    [req.usuario.id, dia],
+  );
+  const j = jornadaDoDia[0] || { jornada_ms: 0, esforco_ms: 0, pausa_ms: 0 };
 
   const { rows: atividades } = await consulta(
     `select tipo, titulo, observacao, inicio, fim, pausa_ms, liquido_ms, estado
        from v_atividades
-      where usuario_id = $1 and inicio >= $2::date and inicio < ($2::date + interval '1 day')
+      where usuario_id = $1 and ${dataLocal("inicio")} = $2::date
       order by inicio`,
     [req.usuario.id, dia],
   );
@@ -57,10 +67,16 @@ rotasRelatorio.post("/enviar", assinc(async (req, res) => {
     return res.status(400).json({ erro: "Nenhuma demanda registrada neste dia." });
   }
 
-  const total = atividades.reduce((s, a) => s + Number(a.liquido_ms), 0);
-  const pausas = atividades.reduce((s, a) => s + Number(a.pausa_ms), 0);
-  const metaMs = ((carga_semanal || 40) / 5) * 3600000;
-  const diferenca = total - metaMs;
+  const jornada = Number(j.jornada_ms);
+  const esforco = Number(j.esforco_ms);
+  const pausas = Number(j.pausa_ms);
+  const paralelo = Math.max(0, esforco - jornada);
+
+  // A meta vale nos dias de escala da pessoa (padrão: segunda a sexta).
+  const diaDaSemana = new Date(dia + "T12:00").getDay(); // 0 = domingo
+  const escala = diaDaSemana !== 0 && diaDaSemana <= (dias_semana || 5);
+  const metaMs = escala ? ((carga_semanal || 40) / (dias_semana || 5)) * 3600000 : 0;
+  const diferenca = jornada - metaMs;
 
   const linhas = atividades
     .map(
@@ -84,12 +100,27 @@ rotasRelatorio.post("/enviar", assinc(async (req, res) => {
   <div style="font-family:Segoe UI,system-ui,sans-serif;color:#1b2434;font-size:14px">
     <h2 style="margin:0 0 2px">Relatório de ${nome}</h2>
     <p style="margin:0 0 18px;color:#5f6b7d">${dataBonita}</p>
-    <p style="margin:0 0 18px">
-      <b>${duracao(total)}</b> produzidos em ${atividades.length} demanda(s).
-      Meta do dia: ${duracao(metaMs)}.
-      <span style="color:${diferenca >= 0 ? "#0e7c66" : "#b03a2e"}">
-        ${diferenca >= 0 ? "Meta atingida" : "Faltaram " + duracao(Math.abs(diferenca))}
-      </span>.
+    <table cellpadding="0" cellspacing="0" style="margin:0 0 20px;font-size:14px">
+      <tr>
+        <td style="padding:0 28px 6px 0">
+          <div style="color:#5f6b7d;font-size:12.5px">Jornada trabalhada</div>
+          <div style="font-size:22px;font-weight:600">${duracao(jornada)}</div>
+        </td>
+        <td style="padding:0 28px 6px 0">
+          <div style="color:#5f6b7d;font-size:12.5px">Meta do dia</div>
+          <div style="font-size:22px;font-weight:600">${escala ? duracao(metaMs) : "fora da escala"}</div>
+        </td>
+        <td style="padding:0 28px 6px 0">
+          <div style="color:#5f6b7d;font-size:12.5px">Diferença</div>
+          <div style="font-size:22px;font-weight:600;color:${diferenca >= 0 ? "#0e7c66" : "#b03a2e"}">
+            ${!escala ? "—" : diferenca >= 0 ? "+" + duracao(diferenca) : "−" + duracao(Math.abs(diferenca))}
+          </div>
+        </td>
+      </tr>
+    </table>
+    <p style="margin:0 0 18px;color:#5f6b7d">
+      ${atividades.length} demanda(s), somando ${duracao(esforco)} de dedicação —
+      ${duracao(paralelo)} em atendimento simultâneo, que por isso não entram duas vezes na jornada.
       Tempo em pausa, fora da conta: ${duracao(pausas)}.
     </p>
     <table cellpadding="7" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:13px">
@@ -104,7 +135,7 @@ rotasRelatorio.post("/enviar", assinc(async (req, res) => {
   </div>`;
 
   const csv = [
-    ["Data", "Tipo", "Identificação", "Início", "Fim", "Pausa (min)", "Tempo líquido", "Horas", "Observação"],
+    ["Data", "Tipo", "Identificação", "Início", "Fim", "Pausa (min)", "Tempo na demanda", "Horas", "Observação"],
     ...atividades.map((a) => [
       new Date(a.inicio).toLocaleDateString("pt-BR"),
       TIPOS[a.tipo] || a.tipo,
@@ -123,9 +154,12 @@ rotasRelatorio.post("/enviar", assinc(async (req, res) => {
   const resumo = {
     dia,
     demandas: atividades.length,
-    liquidoMs: total,
+    jornadaMs: jornada,
+    esforcoMs: esforco,
+    paraleloMs: paralelo,
     pausaMs: pausas,
     metaMs,
+    escala,
     diferencaMs: diferenca,
   };
 

@@ -227,3 +227,106 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   margin-bottom: 12px;
 }
 .secao-topo h2 { margin: 0; }
+
+.nota-calculo {
+  margin: 0 0 14px;
+  padding: 11px 14px;
+  background: var(--superficie);
+  border: 1px solid var(--linha);
+  border-left: 3px solid #2F5FD0;
+  border-radius: 8px;
+  color: var(--tinta-fraca);
+  font-size: 13px;
+  max-width: 860px;
+}
+.nota-calculo b { color: var(--tinta); }
+
+/* Recado curto no rodapé da tela, para ações que não puderam acontecer. */
+.aviso-flutuante {
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 20;
+  margin: 0;
+  max-width: min(520px, calc(100vw - 32px));
+  background: var(--tinta);
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 15px;
+  font-size: 13px;
+  box-shadow: 0 6px 20px rgba(27, 36, 52, 0.22);
+}
+
+/* Ação dentro de uma linha da tabela ------------------------------------- */
+.acao-linha {
+  border: 1px solid var(--linha);
+  background: var(--superficie);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12.5px;
+  color: var(--tinta-fraca);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.acao-linha:hover {
+  border-color: #c9a8a2;
+  color: #b03a2e;
+}
+
+/* Confirmação de ação que afeta outra pessoa ----------------------------- */
+.dialogo {
+  border: 1px solid var(--linha);
+  border-radius: 12px;
+  padding: 22px;
+  width: min(460px, calc(100vw - 32px));
+  color: var(--tinta);
+  background: var(--superficie);
+}
+.dialogo::backdrop { background: rgba(27, 36, 52, 0.4); }
+.dialogo h2 { margin: 0 0 12px; font-size: 17px; }
+.dialogo-texto { margin: 0 0 12px; color: var(--tinta-fraca); }
+.dialogo-texto b { color: var(--tinta); }
+.dialogo-lista {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dialogo-lista li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-left: 3px solid var(--pausa);
+  background: var(--papel);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+.dialogo-tempo {
+  color: var(--tinta-fraca);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.dialogo-botoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+.btn.perigo {
+  background: #b03a2e;
+  border-color: #b03a2e;
+  color: #fff;
+}
+.btn.perigo:hover { background: #96301f; }
+
+/* Marca a demanda que foi fechada pela coordenação, não pelo mediador. */
+.selo-encerrado {
+  display: block;
+  font-size: 11px;
+  color: var(--pausa);
+}

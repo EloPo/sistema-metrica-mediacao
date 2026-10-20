@@ -55,9 +55,19 @@ for (let d = dias - 1; d >= 0; d--) {
       const fim = new Date(inicio.getTime() + duracaoMin * 60000 + pausaMs);
       const aberta = d === 0 && Math.random() < 0.12;
 
+      // A pausa vai com início e fim, igual ao que a extensão envia.
+      const pausas = pausaMs
+        ? [{
+            inicio: inicio.getTime() + 60000,
+            fim: inicio.getTime() + 60000 + pausaMs,
+            motivo: "Almoço",
+            geral: true,
+          }]
+        : [];
+
       await pool.query(
-        `insert into atividades (id, usuario_id, tipo, titulo, inicio, fim, pausa_ms, estado, origem)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,'exemplo') on conflict (id) do nothing`,
+        `insert into atividades (id, usuario_id, tipo, titulo, inicio, fim, pausa_ms, pausas, estado, origem)
+         values ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,'exemplo') on conflict (id) do nothing`,
         [
           `ex${m.id}_${d}_${i}`,
           m.id,
@@ -66,6 +76,7 @@ for (let d = dias - 1; d >= 0; d--) {
           inicio,
           aberta ? null : fim,
           pausaMs,
+          JSON.stringify(pausas),
           aberta ? "andamento" : "concluida",
         ],
       );

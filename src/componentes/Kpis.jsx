@@ -1,4 +1,4 @@
-import { diasUteis, duracao, metaDiariaMs, percentual } from "../formato.js";
+import { duracao, percentual } from "../formato.js";
 
 function Kpi({ valor, rotulo, nota, cor, alerta }) {
   return (
@@ -10,46 +10,51 @@ function Kpi({ valor, rotulo, nota, cor, alerta }) {
   );
 }
 
-export default function Kpis({ dados, totalMediadores, de, ate }) {
+export default function Kpis({ dados, totalMediadores }) {
   const r = dados.resumo;
-  const dias = diasUteis(de, ate);
-  const comRegistro = dados.porMediador.filter((m) => m.tarefas > 0).length;
-  const mediaPorPessoa = comRegistro ? Math.round(r.tarefas / comRegistro) : 0;
 
-  // Meta da equipe: soma da meta diária de cada pessoa pelos dias úteis do período.
-  const metaEquipe = dados.porMediador.reduce((s, m) => s + metaDiariaMs(m.carga_semanal) * dias, 0);
-  const cumprimento = percentual(r.liquido_ms, metaEquipe);
-  const abaixoDaMeta = dados.porMediador.filter(
-    (m) => m.liquido_ms < metaDiariaMs(m.carga_semanal) * dias - 15 * 60000,
-  ).length;
+  // O índice compara a jornada com a meta de quem teve registro no período.
+  // Quem esteve de férias ou afastado não derruba o número da equipe.
+  const cumprimento = percentual(r.jornada_ms, r.meta_ativos_ms);
+  const paralelo = Math.max(0, r.esforco_ms - r.jornada_ms);
 
   return (
     <div className="kpis">
       <Kpi
-        valor={duracao(r.liquido_ms)}
-        rotulo="Horas produzidas"
-        nota="Pausas já descontadas"
+        valor={duracao(r.jornada_ms)}
+        rotulo="Jornada trabalhada"
+        nota="Tempo real, sem contar demandas em paralelo duas vezes"
         cor="#1b2434"
       />
       <Kpi
         valor={`${cumprimento}%`}
         rotulo="Cumprimento da carga horária"
-        nota={`Meta do período: ${duracao(metaEquipe)}`}
+        nota={`Meta de quem trabalhou: ${duracao(r.meta_ativos_ms)}`}
         cor={cumprimento >= 100 ? "#0E7C66" : "#b03a2e"}
         alerta={cumprimento < 100}
       />
       <Kpi
-        valor={abaixoDaMeta}
+        valor={r.abaixo_da_meta}
         rotulo="Mediadores abaixo da meta"
-        nota={`De ${dados.porMediador.length} no período`}
+        nota={
+          r.sem_registro
+            ? `De ${r.com_registro} com registro · ${r.sem_registro} sem nenhum`
+            : `De ${r.com_registro} com registro no período`
+        }
         cor="#b03a2e"
-        alerta={abaixoDaMeta > 0}
+        alerta={r.abaixo_da_meta > 0}
+      />
+      <Kpi
+        valor={duracao(r.esforco_ms)}
+        rotulo="Tempo dedicado às demandas"
+        nota={`${duracao(paralelo)} foram em atendimento simultâneo`}
+        cor="#2F5FD0"
       />
       <Kpi
         valor={r.tarefas}
         rotulo="Demandas no período"
         nota={`${r.concluidas} concluídas · ${r.abertas} em aberto`}
-        cor="#2F5FD0"
+        cor="#8A3E86"
       />
       <Kpi
         valor={dados.emAndamento.length}
@@ -61,25 +66,19 @@ export default function Kpis({ dados, totalMediadores, de, ate }) {
         valor={duracao(r.media_ms)}
         rotulo="Tempo médio por demanda"
         nota="Considera só o que já foi concluído"
-        cor="#8A3E86"
+        cor="#5B6B7F"
       />
       <Kpi
         valor={duracao(r.pausa_ms)}
         rotulo="Tempo em pausa"
-        nota="Almoço, café e intervalos, fora da conta"
+        nota="Almoço, café e intervalos, fora da jornada"
         cor="#a86a1f"
       />
       <Kpi
         valor={duracao(r.maior_ms)}
         rotulo="Demanda mais longa"
-        nota="Maior tempo líquido registrado"
+        nota={`${totalMediadores} mediador(es) cadastrados`}
         cor="#C2451E"
-      />
-      <Kpi
-        valor={mediaPorPessoa}
-        rotulo="Demandas por mediador"
-        nota={`${comRegistro} de ${totalMediadores} com registro no período`}
-        cor="#5B6B7F"
       />
     </div>
   );

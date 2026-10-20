@@ -50,31 +50,21 @@ export function somarDias(dias) {
 export const estaOnline = (visto) => Boolean(visto) && Date.now() - visto < 5 * 60000;
 
 // --- Carga horária ---------------------------------------------------------
+// A meta de cada dia é calculada no servidor (carga semanal ÷ dias de escala,
+// aplicada só nos dias de escala da pessoa). Aqui só interpretamos o resultado.
 
-// Meta diária = carga semanal dividida pelos cinco dias úteis.
-export const metaDiariaMs = (cargaSemanal) => ((cargaSemanal || 40) / 5) * 3600000;
-
-// Quantos dias úteis existem entre duas datas (inclusive).
-export function diasUteis(de, ate) {
-  const inicio = new Date(de + "T12:00");
-  const fim = new Date(ate + "T12:00");
-  let total = 0;
-  for (const d = new Date(inicio); d <= fim; d.setDate(d.getDate() + 1)) {
-    const semana = d.getDay();
-    if (semana !== 0 && semana !== 6) total++;
-  }
-  return Math.max(1, total);
-}
-
-// Como está em relação à meta: acima, perto (até 15min a menos) ou abaixo.
-export function situacaoMeta(feitoMs, metaMs) {
-  const diferenca = feitoMs - metaMs;
+export function situacaoMeta(jornadaMs, metaMs) {
+  const diferenca = jornadaMs - metaMs;
+  if (metaMs === 0) return { estado: "fora", diferenca, rotulo: "Fora da escala" };
   if (diferenca >= 0) return { estado: "cumprida", diferenca, rotulo: "Meta atingida" };
   if (Math.abs(diferenca) <= 15 * 60000) return { estado: "perto", diferenca, rotulo: "Quase lá" };
   return { estado: "abaixo", diferenca, rotulo: "Abaixo da meta" };
 }
 
 export const percentual = (feito, meta) => (meta > 0 ? Math.round((feito / meta) * 100) : 0);
+
+// Sinal com + ou − na frente, para colunas de diferença.
+export const comSinal = (ms) => (ms < 0 ? "−" : "+") + duracao(Math.abs(ms));
 
 // Situação de conexão de cada mediador, para a coluna do painel.
 export function situacaoConexao(m) {

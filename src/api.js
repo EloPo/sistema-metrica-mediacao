@@ -45,6 +45,12 @@ export function buscarPainel({ de, ate, usuario }) {
   return pedir(`/api/painel?${q}`);
 }
 
+// A coordenação encerra o expediente de um mediador: fecha as demandas abertas
+// e derruba a sessão dele.
+export function encerrarExpediente(usuarioId) {
+  return pedir(`/api/painel/encerrar/${usuarioId}`, { method: "POST" });
+}
+
 export function buscarMediadores() {
   return pedir("/api/painel/mediadores");
 }

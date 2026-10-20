@@ -45,5 +45,6 @@ app.use((erro, _req, res, _next) => {
   res.status(500).json({ erro: "Erro interno. Veja o log do servidor." });
 });
 
+// O Render (e a maioria dos serviços) define PORT; PORTA fica como alternativa local.
 const porta = process.env.PORT || process.env.PORTA || 3333;
 app.listen(porta, () => console.log(`API de mediação ouvindo em http://localhost:${porta}`));

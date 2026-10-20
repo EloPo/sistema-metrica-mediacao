@@ -3,9 +3,26 @@ import { consulta } from "./db.js";
 import { exigirLogin } from "./auth.js";
 import { avisar } from "./eventos.js";
 import { assinc } from "./assinc.js";
+import { dataLocal } from "./fuso.js";
 
 export const rotasAtividades = Router();
 rotasAtividades.use(exigirLogin);
+
+// Se a coordenação encerrou o expediente desta pessoa depois de o token ter
+// sido emitido, o token não vale mais. A extensão já trata 401 saindo da conta,
+// então ela se desconecta sozinha no próximo envio.
+rotasAtividades.use(assinc(async (req, res, proximo) => {
+  const { rows } = await consulta(
+    "select desligado_em from usuarios where id = $1",
+    [req.usuario.id],
+  );
+  const desligado = rows[0]?.desligado_em;
+  // `iat` do token vem em segundos; comparamos no mesmo instante de referência.
+  if (desligado && req.usuario.iat && desligado.getTime() > req.usuario.iat * 1000) {
+    return res.status(401).json({ erro: "A coordenação encerrou seu expediente. Entre de novo." });
+  }
+  proximo();
+}));
 
 // A extensão manda o estado atual das atividades (uma ou várias).
 // Upsert pelo id gerado na máquina do mediador: reenviar é sempre seguro.
@@ -80,7 +97,7 @@ rotasAtividades.get("/minhas", assinc(async (req, res) => {
             pausa_ms, pausas, estado
        from atividades
       where usuario_id = $1
-        and ($2::date is null or inicio >= $2::date)
+        and ($2::date is null or ${dataLocal("inicio")} >= $2::date)
       order by inicio`,
     [req.usuario.id, de],
   );

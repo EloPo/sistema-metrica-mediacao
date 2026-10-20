@@ -31,6 +31,9 @@ rotasAuth.post("/login", assinc(async (req, res) => {
     { expiresIn: VALIDADE },
   );
 
+  // Entrar de novo cancela um desligamento feito pela coordenação. Fazer isso
+  // explicitamente evita depender da precisão de segundos do `iat` do token.
+  await consulta("update usuarios set desligado_em = null where id = $1", [pessoa.id]);
   await consulta(
     `insert into sessoes (usuario_id, visto_em, online) values ($1, now(), true)
      on conflict (usuario_id) do update set visto_em = now(), online = true, saiu_em = null`,

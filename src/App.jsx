@@ -8,6 +8,7 @@ import Kpis from "./componentes/Kpis.jsx";
 import Agora from "./componentes/Agora.jsx";
 import TabelaMediadores from "./componentes/TabelaMediadores.jsx";
 import TabelaAtividades, { baixarCsv } from "./componentes/TabelaAtividades.jsx";
+import EncerrarExpediente from "./componentes/EncerrarExpediente.jsx";
 import CumprimentoDiario, { baixarCumprimentoCsv } from "./componentes/CumprimentoDiario.jsx";
 import { DivisaoPorTipo, SerieDoPeriodo, TempoPorMediador } from "./componentes/Graficos.jsx";
 
@@ -17,7 +18,8 @@ const PERIODOS = {
   ontem: { rotulo: "Ontem", de: () => somarDias(-1), ate: () => somarDias(-1) },
   semana: { rotulo: "Últimos 7 dias", de: () => somarDias(-6), ate: () => diaISO() },
   mes: { rotulo: "Últimos 30 dias", de: () => somarDias(-29), ate: () => diaISO() },
-  personalizado: { rotulo: "Escolher datas" },
+  // O demonstrativo tem dados só dos períodos acima, então esconde a opção livre.
+  ...(import.meta.env.VITE_DEMO ? {} : { personalizado: { rotulo: "Escolher datas" } }),
 };
 
 export default function App() {
@@ -28,7 +30,24 @@ export default function App() {
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState("");
   const [atualizadoEm, setAtualizadoEm] = useState(null);
+  const [aviso, setAviso] = useState("");
+  const [encerrando, setEncerrando] = useState(null);
   const carregando = useRef(false);
+
+  function mostrarAviso(texto) {
+    setAviso(texto);
+    setTimeout(() => setAviso(""), 5200);
+  }
+
+  // No demonstrativo o navegador bloqueia o download, então o botão explica
+  // em vez de não fazer nada. No sistema instalado ele baixa o arquivo.
+  function baixar(gerar) {
+    if (import.meta.env.VITE_DEMO) {
+      mostrarAviso("O CSV baixa no sistema instalado. Aqui no demonstrativo o download fica desligado.");
+      return;
+    }
+    gerar();
+  }
 
   function trocarPeriodo(chave) {
     setPeriodo(chave);
@@ -147,6 +166,21 @@ export default function App() {
         </div>
       </header>
 
+      {aviso && <p className="aviso-flutuante" role="status">{aviso}</p>}
+
+      {encerrando && (
+        <EncerrarExpediente
+          mediador={encerrando}
+          abertas={(dados?.emAndamento || []).filter((a) => a.nome === encerrando.nome)}
+          aoFechar={() => setEncerrando(null)}
+          aoConcluir={(texto) => {
+            setEncerrando(null);
+            mostrarAviso(texto);
+            carregar();
+          }}
+        />
+      )}
+
       <main>
         {erro && <p className="erro">{erro}</p>}
         {!dados && !erro && <p className="vazio">Carregando os números…</p>}
@@ -154,12 +188,7 @@ export default function App() {
         {dados && (
           <>
             <section>
-              <Kpis
-                dados={dados}
-                totalMediadores={mediadores.length}
-                de={filtros.de}
-                ate={filtros.ate}
-              />
+              <Kpis dados={dados} totalMediadores={mediadores.length} />
             </section>
 
             <section>
@@ -169,7 +198,7 @@ export default function App() {
 
             <section className="colunas">
               <div className="cartao">
-                <h2>Tempo produzido por mediador</h2>
+                <h2>Jornada x meta por mediador</h2>
                 <TempoPorMediador
                   porMediador={dados.porMediador}
                   aoClicar={(id) => setFiltros((f) => ({ ...f, usuario: String(id) }))}
@@ -180,17 +209,23 @@ export default function App() {
                 <DivisaoPorTipo porTipo={dados.porTipo} />
               </div>
               <div className="cartao">
-                <h2>{umDiaSo ? "Demandas iniciadas por hora" : "Evolução no período"}</h2>
+                <h2>{umDiaSo ? "Demandas iniciadas por hora" : "Jornada da equipe por dia"}</h2>
                 <SerieDoPeriodo porDia={dados.porDia} porHora={dados.porHora} umDiaSo={umDiaSo} />
               </div>
             </section>
 
             <section>
+              <p className="nota-calculo">
+                <b>Jornada</b> é o tempo real de trabalho: períodos unidos, sem contar duas vezes
+                o que foi atendido em paralelo e já sem as pausas. É esse número que a carga
+                horária compara. <b>Dedicado</b> é a soma do tempo de cada demanda, que pode
+                passar das horas do dia justamente por causa do atendimento simultâneo.
+              </p>
               <div className="secao-topo">
                 <h2>Carga horária dia a dia</h2>
                 <button
                   className="btn"
-                  onClick={() => baixarCumprimentoCsv(dados.porMediadorDia, `carga-horaria-${sufixo}.csv`)}
+                  onClick={() => baixar(() => baixarCumprimentoCsv(dados.porMediadorDia, `carga-horaria-${sufixo}.csv`))}
                 >
                   Baixar carga horária em CSV
                 </button>
@@ -203,8 +238,7 @@ export default function App() {
               <TabelaMediadores
                 porMediador={dados.porMediador}
                 aoEscolher={(id) => setFiltros((f) => ({ ...f, usuario: id }))}
-                de={filtros.de}
-                ate={filtros.ate}
+                aoEncerrar={setEncerrando}
               />
             </section>
 
@@ -213,7 +247,7 @@ export default function App() {
                 <h2>Demanda por demanda</h2>
                 <button
                   className="btn"
-                  onClick={() => baixarCsv(dados.atividades, `mediacao-${sufixo}.csv`)}
+                  onClick={() => baixar(() => baixarCsv(dados.atividades, `mediacao-${sufixo}.csv`))}
                 >
                   Baixar demandas em CSV
                 </button>
