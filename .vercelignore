@@ -1,0 +1,4 @@
+# O servidor da API roda no Render, não no Vercel.
+# Sem esta linha o Vercel tenta publicar cada arquivo de api/ como
+# uma função separada e recusa o deploy (limite de 12 no gratuito).
+api
