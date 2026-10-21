@@ -35,8 +35,10 @@ rotasAtividades.post("/sincronizar", assinc(async (req, res) => {
     if (!a?.id || !a?.tipo || !a?.inicio) continue;
     await consulta(
       `insert into atividades
-         (id, usuario_id, tipo, titulo, observacao, inicio, fim, pausa_ms, pausas, estado, atualizado_em)
-       values ($1,$2,$3,$4,$5, to_timestamp($6/1000.0), $7, $8, $9::jsonb, $10, now())
+         (id, usuario_id, tipo, titulo, observacao, inicio, fim, pausa_ms, pausas,
+          estado, origem, editado_em, atualizado_em)
+       values ($1,$2,$3,$4,$5, to_timestamp($6/1000.0), $7, $8, $9::jsonb, $10, $11,
+               case when $12::bigint is null then null else to_timestamp($12/1000.0) end, now())
        on conflict (id) do update set
          tipo = excluded.tipo,
          titulo = excluded.titulo,
@@ -46,8 +48,13 @@ rotasAtividades.post("/sincronizar", assinc(async (req, res) => {
          pausa_ms = excluded.pausa_ms,
          pausas = excluded.pausas,
          estado = excluded.estado,
+         origem = excluded.origem,
+         editado_em = excluded.editado_em,
          atualizado_em = now()
-       where atividades.usuario_id = excluded.usuario_id`,
+       where atividades.usuario_id = excluded.usuario_id
+         -- a coordenação tem a palavra final: o que ela editou não é
+         -- sobrescrito pelo reenvio automático da extensão
+         and atividades.editado_por is null`,
       [
         a.id,
         req.usuario.id,
@@ -59,6 +66,8 @@ rotasAtividades.post("/sincronizar", assinc(async (req, res) => {
         Math.max(0, Math.round(Number(a.pausaMs) || 0)),
         JSON.stringify(a.pausas || []),
         a.estado || "andamento",
+        ["extensao", "manual"].includes(a.origem) ? a.origem : "extensao",
+        a.editadoEm ? Number(a.editadoEm) : null,
       ],
     );
     aceitas.push(a.id);

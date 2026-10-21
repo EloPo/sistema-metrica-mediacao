@@ -51,6 +51,19 @@ export function encerrarExpediente(usuarioId) {
   return pedir(`/api/painel/encerrar/${usuarioId}`, { method: "POST" });
 }
 
+// CRUD de demandas pela coordenação.
+export function criarDemanda(dados) {
+  return pedir("/api/painel/atividades", { method: "POST", body: JSON.stringify(dados) });
+}
+
+export function salvarDemanda(id, dados) {
+  return pedir(`/api/painel/atividades/${id}`, { method: "PUT", body: JSON.stringify(dados) });
+}
+
+export function excluirDemanda(id) {
+  return pedir(`/api/painel/atividades/${id}`, { method: "DELETE" });
+}
+
 export function buscarMediadores() {
   return pedir("/api/painel/mediadores");
 }

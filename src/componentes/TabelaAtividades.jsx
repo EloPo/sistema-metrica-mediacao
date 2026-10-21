@@ -1,4 +1,4 @@
-import { duracao, hora, tipoInfo } from "../formato.js";
+import { duracao, hora, procedencia, tipoInfo } from "../formato.js";
 
 export function baixarCsv(atividades, nomeArquivo) {
   const linhas = [[
@@ -16,9 +16,11 @@ export function baixarCsv(atividades, nomeArquivo) {
       Math.round(a.pausa_ms / 60000),
       duracao(a.liquido_ms),
       (a.liquido_ms / 3600000).toFixed(2).replace(".", ","),
-      a.encerrado_por_nome
-        ? `Encerrada por ${a.encerrado_por_nome}`
-        : a.estado === "concluida" ? "Concluída" : "Em aberto",
+      (() => {
+        const m = procedencia(a);
+        const base = a.estado === "concluida" ? "Concluída" : "Em aberto";
+        return m ? `${base} — ${m.rotulo}${m.detalhe ? " (" + m.detalhe + ")" : ""}` : base;
+      })(),
       a.observacao || "",
     ]);
   });
@@ -31,7 +33,7 @@ export function baixarCsv(atividades, nomeArquivo) {
   URL.revokeObjectURL(url);
 }
 
-export default function TabelaAtividades({ atividades }) {
+export default function TabelaAtividades({ atividades, aoEditar }) {
   if (!atividades.length) return <p className="vazio">Nenhuma demanda registrada no período.</p>;
 
   return (
@@ -48,11 +50,13 @@ export default function TabelaAtividades({ atividades }) {
             <th className="num">Pausa</th>
             <th className="num">Tempo na demanda</th>
             <th>Observação</th>
+            {aoEditar && <th></th>}
           </tr>
         </thead>
         <tbody>
           {atividades.map((a) => {
             const t = tipoInfo(a.tipo);
+            const marca = procedencia(a);
             return (
               <tr key={a.id}>
                 <td>{a.nome}</td>
@@ -67,15 +71,25 @@ export default function TabelaAtividades({ atividades }) {
                 <td>{hora(a.inicio)}</td>
                 <td className={a.fim ? "" : "online"}>
                   {a.fim ? hora(a.fim) : "em aberto"}
-                  {a.encerrado_por_nome && (
-                    <span className="selo-encerrado" title={`Encerrada por ${a.encerrado_por_nome}`}>
-                      pela coordenação
+                  {marca && (
+                    <span
+                      className="selo-encerrado"
+                      title={marca.detalhe ? `${marca.rotulo} — ${marca.detalhe}` : marca.rotulo}
+                    >
+                      {marca.rotulo}
                     </span>
                   )}
                 </td>
                 <td className="num">{a.pausa_ms ? duracao(a.pausa_ms) : "—"}</td>
                 <td className="num">{duracao(a.liquido_ms)}</td>
                 <td>{a.observacao}</td>
+                {aoEditar && (
+                  <td>
+                    <button type="button" className="acao-linha" onClick={() => aoEditar(a)}>
+                      Corrigir
+                    </button>
+                  </td>
+                )}
               </tr>
             );
           })}

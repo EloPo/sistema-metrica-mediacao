@@ -74,3 +74,38 @@ export function situacaoConexao(m) {
   if (m.em_pausa) return { classe: "pausado", texto: m.motivo_pausa || "Em pausa" };
   return { classe: "online", texto: "Trabalhando" };
 }
+
+// --- Datas para campos de formulário ---------------------------------------
+
+// Converte um instante para o formato que o <input type="datetime-local"> usa.
+export function paraCampoLocal(ms) {
+  const d = new Date(ms);
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+export function deCampoLocal(valor) {
+  if (!valor) return null;
+  const ms = new Date(valor).getTime();
+  return Number.isNaN(ms) ? null : ms;
+}
+
+// Como a demanda entrou no sistema, para o painel mostrar a procedência.
+export function procedencia(a) {
+  if (a.origem === "coordenacao") {
+    return { rotulo: "lançada pela coordenação", detalhe: a.criado_por_nome };
+  }
+  if (a.encerrado_por_nome) {
+    return { rotulo: "encerrada pela coordenação", detalhe: a.encerrado_por_nome };
+  }
+  if (a.editado_por_nome) {
+    return { rotulo: "corrigida pela coordenação", detalhe: a.editado_por_nome };
+  }
+  if (a.origem === "manual") {
+    return { rotulo: "lançada à mão pelo mediador", detalhe: null };
+  }
+  if (a.editado_em) {
+    return { rotulo: "editada pelo mediador", detalhe: null };
+  }
+  return null;
+}

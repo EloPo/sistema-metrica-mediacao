@@ -8,7 +8,8 @@
     "dev": "node --watch src/server.js",
     "migrar": "node src/migrar.js",
     "semear": "node src/semear.js",
-    "exemplo": "node src/exemplo.js"
+    "exemplo": "node src/exemplo.js",
+    "iniciar": "node src/migrar.js && node src/server.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

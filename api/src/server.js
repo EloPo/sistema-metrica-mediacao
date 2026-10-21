@@ -5,6 +5,7 @@ import { rotasAuth } from "./auth.js";
 import { rotasAtividades } from "./rotas-atividades.js";
 import { rotasPainel } from "./rotas-painel.js";
 import { rotasRelatorio } from "./rotas-relatorio.js";
+import { rotasCrud } from "./rotas-crud.js";
 import { pool } from "./db.js";
 
 const app = express();
@@ -37,6 +38,8 @@ app.get("/api/saude", async (_req, res) => {
 
 app.use("/api", rotasAuth);
 app.use("/api/atividades", rotasAtividades);
+// O CRUD vem antes do painel: a rota mais específica precisa ser testada primeiro.
+app.use("/api/painel/atividades", rotasCrud);
 app.use("/api/painel", rotasPainel);
 app.use("/api/relatorio", rotasRelatorio);
 

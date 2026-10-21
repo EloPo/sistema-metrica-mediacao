@@ -130,7 +130,11 @@ rotasPainel.get("/", assinc(async (req, res) => {
         `select id, nome, usuario, tipo, titulo, observacao, estado,
                 (extract(epoch from inicio) * 1000)::bigint as inicio,
                 case when fim is null then null else (extract(epoch from fim) * 1000)::bigint end as fim,
-                pausa_ms, liquido_ms, encerrado_por_nome
+                pausa_ms, liquido_ms, encerrado_por_nome,
+                origem,
+                case when editado_em is null then null
+                     else (extract(epoch from editado_em) * 1000)::bigint end as editado_em,
+                editado_por_nome, criado_por_nome
            from v_atividades where ${FILTRO}
           order by inicio desc limit 400`,
         p,

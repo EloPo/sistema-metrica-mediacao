@@ -9,22 +9,15 @@ import Agora from "./componentes/Agora.jsx";
 import TabelaMediadores from "./componentes/TabelaMediadores.jsx";
 import TabelaAtividades, { baixarCsv } from "./componentes/TabelaAtividades.jsx";
 import EncerrarExpediente from "./componentes/EncerrarExpediente.jsx";
+import EditorDemanda from "./componentes/EditorDemanda.jsx";
+import Calendario from "./componentes/Calendario.jsx";
 import CumprimentoDiario, { baixarCumprimentoCsv } from "./componentes/CumprimentoDiario.jsx";
 import { DivisaoPorTipo, SerieDoPeriodo, TempoPorMediador } from "./componentes/Graficos.jsx";
 
 // Um seletor só para o período, com a opção de escolher datas à mão.
-const PERIODOS = {
-  hoje: { rotulo: "Hoje", de: () => diaISO(), ate: () => diaISO() },
-  ontem: { rotulo: "Ontem", de: () => somarDias(-1), ate: () => somarDias(-1) },
-  semana: { rotulo: "Últimos 7 dias", de: () => somarDias(-6), ate: () => diaISO() },
-  mes: { rotulo: "Últimos 30 dias", de: () => somarDias(-29), ate: () => diaISO() },
-  // O demonstrativo tem dados só dos períodos acima, então esconde a opção livre.
-  ...(import.meta.env.VITE_DEMO ? {} : { personalizado: { rotulo: "Escolher datas" } }),
-};
 
 export default function App() {
   const [sessao, setSessao] = useState(lerSessao());
-  const [periodo, setPeriodo] = useState("hoje");
   const [filtros, setFiltros] = useState({ de: diaISO(), ate: diaISO(), usuario: "" });
   const [mediadores, setMediadores] = useState([]);
   const [dados, setDados] = useState(null);
@@ -32,6 +25,7 @@ export default function App() {
   const [atualizadoEm, setAtualizadoEm] = useState(null);
   const [aviso, setAviso] = useState("");
   const [encerrando, setEncerrando] = useState(null);
+  const [editando, setEditando] = useState(null);
   const carregando = useRef(false);
 
   function mostrarAviso(texto) {
@@ -49,11 +43,6 @@ export default function App() {
     gerar();
   }
 
-  function trocarPeriodo(chave) {
-    setPeriodo(chave);
-    const p = PERIODOS[chave];
-    if (p.de) setFiltros((f) => ({ ...f, de: p.de(), ate: p.ate() }));
-  }
 
   const carregar = useCallback(async () => {
     if (carregando.current) return;
@@ -122,26 +111,11 @@ export default function App() {
           <div className="controles">
             <span className="pulso"><i />ao vivo</span>
 
-            <select value={periodo} onChange={(e) => trocarPeriodo(e.target.value)}>
-              {Object.entries(PERIODOS).map(([chave, p]) => (
-                <option key={chave} value={chave}>{p.rotulo}</option>
-              ))}
-            </select>
-
-            {periodo === "personalizado" && (
-              <>
-                <input
-                  type="date"
-                  value={filtros.de}
-                  onChange={(e) => setFiltros((f) => ({ ...f, de: e.target.value }))}
-                />
-                <input
-                  type="date"
-                  value={filtros.ate}
-                  onChange={(e) => setFiltros((f) => ({ ...f, ate: e.target.value }))}
-                />
-              </>
-            )}
+            <Calendario
+              de={filtros.de}
+              ate={filtros.ate}
+              aoEscolher={(de, ate) => setFiltros((f) => ({ ...f, de, ate }))}
+            />
 
             <select
               value={filtros.usuario}
@@ -167,6 +141,19 @@ export default function App() {
       </header>
 
       {aviso && <p className="aviso-flutuante" role="status">{aviso}</p>}
+
+      {editando && (
+        <EditorDemanda
+          demanda={editando === "nova" ? null : editando}
+          mediadores={mediadores}
+          aoFechar={() => setEditando(null)}
+          aoConcluir={(texto) => {
+            setEditando(null);
+            mostrarAviso(texto);
+            carregar();
+          }}
+        />
+      )}
 
       {encerrando && (
         <EncerrarExpediente
@@ -245,14 +232,19 @@ export default function App() {
             <section>
               <div className="secao-topo">
                 <h2>Demanda por demanda</h2>
-                <button
-                  className="btn"
-                  onClick={() => baixar(() => baixarCsv(dados.atividades, `mediacao-${sufixo}.csv`))}
-                >
-                  Baixar demandas em CSV
-                </button>
+                <div className="secao-acoes">
+                  <button className="btn" onClick={() => setEditando("nova")}>
+                    Lançar demanda
+                  </button>
+                  <button
+                    className="btn"
+                    onClick={() => baixar(() => baixarCsv(dados.atividades, `mediacao-${sufixo}.csv`))}
+                  >
+                    Baixar demandas em CSV
+                  </button>
+                </div>
               </div>
-              <TabelaAtividades atividades={dados.atividades} />
+              <TabelaAtividades atividades={dados.atividades} aoEditar={setEditando} />
             </section>
           </>
         )}

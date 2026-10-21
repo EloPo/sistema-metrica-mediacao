@@ -58,7 +58,11 @@ select
   a.atualizado_em,
   greatest(0, (extract(epoch from (coalesce(a.fim, now()) - a.inicio)) * 1000)::bigint - a.pausa_ms) as liquido_ms,
   a.encerrado_por,
-  (select g.nome from usuarios g where g.id = a.encerrado_por) as encerrado_por_nome
+  (select g.nome from usuarios g where g.id = a.encerrado_por) as encerrado_por_nome,
+  a.origem,
+  a.editado_em,
+  (select g.nome from usuarios g where g.id = a.editado_por) as editado_por_nome,
+  (select g.nome from usuarios g where g.id = a.criado_por) as criado_por_nome
 from atividades a
 join usuarios u on u.id = a.usuario_id;
 
@@ -178,3 +182,16 @@ left join unidos u on u.usuario_id = s.usuario_id and u.dia = s.dia;
 -- extensão daquele mediador cair no próximo envio e pedir a senha de novo.
 alter table atividades add column if not exists encerrado_por integer references usuarios(id);
 alter table usuarios   add column if not exists desligado_em  timestamptz;
+
+-- Versão 7: rastrear quem mexeu em cada demanda e permitir o CRUD pela coordenação.
+--
+-- `origem` já existia ('extensao'). Agora também vale 'manual' (o mediador
+-- lançou à mão no relatório) e 'coordenacao' (a coordenação lançou pelo painel).
+-- `editado_em`/`editado_por` dizem quando e por quem a demanda foi alterada
+-- depois de criada. Sem isso não há como saber se um número foi digitado ou
+-- medido pelo cronômetro.
+alter table atividades add column if not exists editado_em  timestamptz;
+alter table atividades add column if not exists editado_por integer references usuarios(id);
+alter table atividades add column if not exists criado_por  integer references usuarios(id);
+
+create index if not exists idx_atividades_editado on atividades (editado_em);
